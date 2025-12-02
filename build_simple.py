@@ -63,7 +63,8 @@ def main():
     print("\n📝 dist 資料夾內容:")
     for item in dist_dir.iterdir():
         print(f"  • {item.name}")
-    print("\n⚠️  記得將 Windows 版 chromedriver.exe 放入 dist 資料夾！")
+    print("\n✅ 使用 webdriver-manager，無需手動放置 chromedriver！")
+    print("💡 程式會自動下載對應的 ChromeDriver 版本")
 
 if __name__ == "__main__":
     main()

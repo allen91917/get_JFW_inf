@@ -1,4 +1,5 @@
 import os
+import sys
 import platform
 import subprocess
 from selenium import webdriver
@@ -7,10 +8,27 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from webdriver_manager.chrome import ChromeDriverManager
 import time
 from bs4 import BeautifulSoup
 import pandas as pd
 from pathlib import Path
+
+# ============================
+# 取得執行檔所在目錄（支援 PyInstaller 打包）
+# ============================
+def get_base_dir():
+    """
+    取得程式執行的基礎目錄
+    如果是 PyInstaller 打包的 exe，會返回 exe 所在目錄
+    如果是 Python 腳本，會返回腳本所在目錄
+    """
+    if getattr(sys, 'frozen', False):
+        # 如果是打包後的 exe
+        return os.path.dirname(sys.executable)
+    else:
+        # 如果是 Python 腳本
+        return os.path.dirname(os.path.abspath(__file__))
 
 # ============================
 # 設定參數（可獨立管理）
@@ -59,29 +77,20 @@ def get_chrome_version() -> str:
 # 建立 Selenium Driver
 # ============================
 def create_driver():
-    chrome_version = get_chrome_version()
-    if not chrome_version:
-        raise Exception("無法取得 Chrome 版本，請確認是否已安裝 Google Chrome")
-
-    print(f"🌐 Chrome 主版號：{chrome_version}")
-
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-    # 判斷系統並選擇 driver
-    system = platform.system()
-    driver_path = os.path.join(BASE_DIR, "chromedriver.exe" if system == "Windows" else "chromedriver")
-
-    if not os.path.exists(driver_path):
-        raise FileNotFoundError(f"❌ 找不到 driver：{driver_path}")
-
+    """使用 webdriver-manager 自動管理 ChromeDriver"""
+    print("🌐 正在初始化 Chrome Driver...")
+    
     # Chrome Options
     chrome_options = Options()
     chrome_options.add_argument("--disable-infobars")
     chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
     chrome_options.add_experimental_option("useAutomationExtension", False)
 
-    service = Service(driver_path)
+    # 使用 webdriver-manager 自動下載和管理 chromedriver
+    service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=chrome_options)
+    
+    print("✅ Chrome Driver 初始化完成")
     return driver
 
 
@@ -94,11 +103,14 @@ def read_all_user_info():
     每一行格式： account,password
     回傳 List[Tuple[str, str]]
     """
-    base_dir = os.path.dirname(os.path.abspath(__file__))
+    base_dir = get_base_dir()  # 使用新的函數取得正確路徑
     txt_path = os.path.join(base_dir, "用戶資訊.txt")
 
     if not os.path.exists(txt_path):
-        raise FileNotFoundError("❌ 找不到 用戶資訊.txt")
+        print(f"❌ 找不到 用戶資訊.txt")
+        print(f"📁 當前查找路徑: {txt_path}")
+        print(f"📂 exe 所在目錄: {base_dir}")
+        raise FileNotFoundError(f"❌ 找不到 用戶資訊.txt，請確保檔案與 exe 在同一資料夾")
 
     user_list = []
     with open(txt_path, "r", encoding="utf-8") as f:
